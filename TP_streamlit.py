@@ -80,7 +80,7 @@ def draw_schematic(use_groove, depth_ratio=0.4, figsize=(4, 3)):
         ax.text((x0+x1)/2, (y0+y1)/2, '抛光层', ha='center', va='center', fontsize=10, weight='bold')
     # 热流箭头
     ax.arrow(x1+0.3, y0, 0, y3-y0, head_width=0.2, head_length=0.3, fc='red', ec='red', linewidth=2)
-    ax.text(x1+0.6, (y1+y3)/2, '热流方向', rotation=90, va='center', ha='center', fontsize=9, weight='bold')
+    ax.text(x1+0.6, (y0+y3)/2, '热流方向', rotation=90, va='center', ha='center', fontsize=9, weight='bold')
     return fig
 
 # ==================== 侧边栏输入 ====================
