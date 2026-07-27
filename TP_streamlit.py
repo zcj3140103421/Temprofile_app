@@ -51,20 +51,17 @@ def draw_schematic(num_layers, use_groove, depth_ratio=0.4, figsize=(4, 3)):
     ax.set_ylim(0, 10)
     ax.axis('off')
     x0, x1 = 0.5, 5.5
-    # 各层高度等分
     top_y = 9.0
     bottom_y = 1.0
     layer_h = (top_y - bottom_y) / num_layers
-    colors = ['#7fc0f0', '#f9d057', '#a6d96a', '#ffb6c1', '#d8bfd8']  # 最多支持5层
+    colors = ['#7fc0f0', '#f9d057', '#a6d96a', '#ffb6c1', '#d8bfd8']
 
     for i in range(num_layers):
         y_top = top_y - i * layer_h
         y_bottom = y_top - layer_h
         fill_color = colors[i % len(colors)]
-        # 第一层特殊处理沟槽
         if i == 0 and use_groove:
             ax.add_patch(Rectangle((x0, y_bottom), x1-x0, layer_h, facecolor=fill_color, edgecolor='black', linewidth=2))
-            # 沟槽从顶部向下
             depth_px = depth_ratio * layer_h if 0 < depth_ratio < 1 else 0.3 * layer_h
             groove_bottom_y = y_top - depth_px
             num_grooves = 5
@@ -85,7 +82,6 @@ def draw_schematic(num_layers, use_groove, depth_ratio=0.4, figsize=(4, 3)):
             ax.text((x0+x1)/2, (y_top + y_bottom)/2, f'层{i+1}', ha='center', va='center',
                     fontsize=10, weight='bold')
 
-    # 热流箭头（从上到下）
     ax.arrow(x1+0.3, top_y, 0, bottom_y-top_y, head_width=0.2, head_length=0.3, fc='red', ec='red', linewidth=2)
     ax.text(x1+0.6, (top_y+bottom_y)/2, '热流方向', rotation=90, va='center', ha='center', fontsize=9, weight='bold')
     return fig
@@ -93,27 +89,34 @@ def draw_schematic(num_layers, use_groove, depth_ratio=0.4, figsize=(4, 3)):
 # ==================== 侧边栏输入 ====================
 st.sidebar.header("⚙️ 参数设置")
 
-# ---- 层数选择 ----
-num_layers = st.sidebar.selectbox("选择层数", options=[2, 3, 4], index=1)  # 默认3层
+# 层数选择
+num_layers = st.sidebar.selectbox("选择层数", options=[2, 3, 4], index=1)
 
-# ---- 动态生成各层输入 ----
+# ---- 动态生成各层输入（独立行，避免数字遮挡） ----
 st.sidebar.subheader("各层参数")
 k_list = []
 thick_list = []
-# 默认初始值（用于3层，可自定义）
-default_k = [0.2, 0.15, 1.0, 0.15]
-default_thick = [1e-3, 0.05e-3, 2e-3, 0.05e-3]
+default_k = [0.2, 0.15, 1.0, 0.8]
+default_thick = [1e-3, 0.05e-3, 2e-3, 0.5e-3]
 
 for i in range(num_layers):
-    col1, col2 = st.sidebar.columns(2)
-    with col1:
-        k = st.number_input(f"层{i+1} 导热系数 (W/m·K)", value=default_k[i] if i < len(default_k) else 0.2,
-                            step=0.01, format="%.3f", key=f"k_{i}")
-    with col2:
-        thick = st.number_input(f"层{i+1} 厚度 (m)", value=default_thick[i] if i < len(default_thick) else 1e-3,
-                                step=1e-5, format="%.6f", key=f"thick_{i}")
-    k_list.append(k)
-    thick_list.append(thick)
+    # 每层用两个独立输入框，占据整行宽度
+    k_val = st.sidebar.number_input(
+        f"层{i+1} 导热系数 (W/(m·K))",
+        value=default_k[i] if i < len(default_k) else 0.2,
+        step=0.01,
+        format="%.3f",
+        key=f"k_{i}"
+    )
+    thick_val = st.sidebar.number_input(
+        f"层{i+1} 厚度 (m)",
+        value=default_thick[i] if i < len(default_thick) else 1e-3,
+        step=1e-5,
+        format="%.6f",
+        key=f"thick_{i}"
+    )
+    k_list.append(k_val)
+    thick_list.append(thick_val)
 
 st.sidebar.subheader("边界条件")
 T_bottom = st.sidebar.number_input("底部温度 (°C)", value=18.0, step=0.5)
@@ -176,7 +179,6 @@ if st.sidebar.button("🚀 计算", type="primary"):
             title_suffix = f"顶部热流 {q_flux:.0f} W/m²"
             total_drop = interfaces_T[0] - interfaces_T[-1]
             heat_flux_val = q_flux
-            top_temp_val = interfaces_T[0]
         else:
             T_top = T_top_input
             R_total = sum(thick_list[i] / k_eff_list[i] for i in range(len(k_eff_list)))
@@ -190,7 +192,6 @@ if st.sidebar.button("🚀 计算", type="primary"):
             title_suffix = f"顶部温度 {T_top:.1f}°C, 热流 {q_flux:.2f} W/m²"
             total_drop = T_top - T_bottom
             heat_flux_val = q_flux
-            top_temp_val = T_top
 
         # 动态生成界面名称
         names = ["抛光表面 (顶部)"]
@@ -206,7 +207,7 @@ if st.sidebar.button("🚀 计算", type="primary"):
         with col_metric2:
             st.metric("底部（压板）温度", f"{interfaces_T[-1]:.1f} °C")
         with col_metric3:
-            st.metric("总温差", f"{total_drop:.1f} °C", delta=None)
+            st.metric("总温差", f"{total_drop:.1f} °C")
         with col_metric4:
             st.metric("热流密度", f"{heat_flux_val:.2f} W/m²")
 
@@ -273,7 +274,7 @@ else:
         st.write("等待计算...")
     with col2:
         st.subheader("📐 结构示意图")
-        fig_schem = draw_schematic(num_layers, False)  # 默认显示当前层数无沟槽
+        fig_schem = draw_schematic(num_layers, False)
         st.pyplot(fig_schem)
 
 st.sidebar.markdown("---")
