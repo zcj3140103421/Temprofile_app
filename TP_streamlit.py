@@ -6,6 +6,40 @@ import matplotlib.font_manager as fm
 import pandas as pd
 import os
 
+# ---------- 页面配置必须放在最前面 ----------
+st.set_page_config(page_title="抛光垫稳态热传导分析", layout="wide")
+
+# ---------- 登录验证 ----------
+# 初始化登录状态
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+# 如果未登录，显示登录界面并阻止后续内容
+if not st.session_state.logged_in:
+    # 清空界面，只显示登录表单
+    st.title("🔐 登录")
+    st.write("请输入用户名和密码以访问该应用。")
+
+    with st.form("login_form"):
+        username = st.text_input("用户名", placeholder="请输入用户名")
+        password = st.text_input("密码", type="password", placeholder="请输入密码")
+        submit = st.form_submit_button("登录")
+
+        if submit:
+            # 从 st.secrets 获取凭证（若未配置则使用默认值）
+            valid_username = st.secrets.get("USERNAME", "admin")
+            valid_password = st.secrets.get("PASSWORD", "admin123")
+            if username == valid_username and password == valid_password:
+                st.session_state.logged_in = True
+                st.session_state.username = username
+                st.success("登录成功！正在跳转...")
+                st.rerun()  # 重新运行以显示主界面
+            else:
+                st.error("用户名或密码错误，请重试。")
+    # 阻止下方所有主应用代码执行
+    st.stop()
+
+# ==================== 登录成功，显示主应用 ====================
 # 字体设置
 font_path = os.path.join(os.path.dirname(__file__), 'NotoSansCJK-Regular.otf')
 if os.path.exists(font_path):
@@ -17,8 +51,15 @@ else:
     plt.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'WenQuanYi Micro Hei', 'PingFang SC', 'Arial Unicode MS']
 plt.rcParams['axes.unicode_minus'] = False
 
-st.set_page_config(page_title="抛光垫稳态热传导分析", layout="wide")
 st.title("🔬 抛光垫稳态热传导分析（含沟槽修正）")
+
+# 在侧边栏显示当前用户，并添加登出按钮
+st.sidebar.write(f"👤 当前用户：{st.session_state.get('username', '')}")
+if st.sidebar.button("🚪 登出"):
+    st.session_state.logged_in = False
+    st.session_state.pop("username", None)
+    st.rerun()
+st.sidebar.divider()
 
 # ==================== 核心计算函数（支持任意层数） ====================
 def compute_temperature(k_list, thickness_list, T_bottom, q_flux, num_nodes=1000):
@@ -92,7 +133,7 @@ st.sidebar.header("⚙️ 参数设置")
 # 层数选择
 num_layers = st.sidebar.selectbox("选择层数", options=[2, 3, 4], index=1)
 
-# ---- 动态生成各层输入（独立行，避免数字遮挡） ----
+# ---- 动态生成各层输入（独立行） ----
 st.sidebar.subheader("各层参数")
 k_list = []
 thick_list = []
@@ -100,7 +141,6 @@ default_k = [0.2, 0.15, 1.0, 0.8]
 default_thick = [1e-3, 0.05e-3, 2e-3, 0.5e-3]
 
 for i in range(num_layers):
-    # 每层用两个独立输入框，占据整行宽度
     k_val = st.sidebar.number_input(
         f"层{i+1} 导热系数 (W/(m·K))",
         value=default_k[i] if i < len(default_k) else 0.2,
@@ -112,7 +152,7 @@ for i in range(num_layers):
         f"层{i+1} 厚度 (m)",
         value=default_thick[i] if i < len(default_thick) else 1e-3,
         step=1e-5,
-        format="%.3e",
+        format="%.6f",
         key=f"thick_{i}"
     )
     k_list.append(k_val)
@@ -235,7 +275,7 @@ if st.sidebar.button("🚀 计算", type="primary"):
                 ax_temp.text(z_mm_val + 0.02, interfaces_T[idx] + 0.5, f'{interfaces_T[idx]:.1f}°C', fontsize=9)
             ax_temp.set_xlabel('厚度方向位置 (mm)  [0=抛光表面 → 底部]', fontsize=12)
             ax_temp.set_ylabel('温度 (°C)', fontsize=12)
-            # ax_temp.set_title(f'稳态轴向温度分布\n{title_suffix}', fontsize=14, weight='bold')
+            ax_temp.set_title(f'稳态轴向温度分布\n{title_suffix}', fontsize=14, weight='bold')
             ax_temp.grid(True, alpha=0.3)
             ax_temp.legend(loc='best')
             st.pyplot(fig_temp)
