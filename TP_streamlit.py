@@ -112,7 +112,7 @@ for i in range(num_layers):
         f"层{i+1} 厚度 (m)",
         value=default_thick[i] if i < len(default_thick) else 1e-3,
         step=1e-5,
-        format="%.6f",
+        format="%.3e",
         key=f"thick_{i}"
     )
     k_list.append(k_val)
@@ -235,7 +235,7 @@ if st.sidebar.button("🚀 计算", type="primary"):
                 ax_temp.text(z_mm_val + 0.02, interfaces_T[idx] + 0.5, f'{interfaces_T[idx]:.1f}°C', fontsize=9)
             ax_temp.set_xlabel('厚度方向位置 (mm)  [0=抛光表面 → 底部]', fontsize=12)
             ax_temp.set_ylabel('温度 (°C)', fontsize=12)
-            ax_temp.set_title(f'稳态轴向温度分布\n{title_suffix}', fontsize=14, weight='bold')
+            # ax_temp.set_title(f'稳态轴向温度分布\n{title_suffix}', fontsize=14, weight='bold')
             ax_temp.grid(True, alpha=0.3)
             ax_temp.legend(loc='best')
             st.pyplot(fig_temp)
