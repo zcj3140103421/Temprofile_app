@@ -152,7 +152,7 @@ for i in range(num_layers):
         f"层{i+1} 厚度 (m)",
         value=default_thick[i] if i < len(default_thick) else 1e-3,
         step=1e-5,
-        format="%.6f",
+        format="%.3e",
         key=f"thick_{i}"
     )
     k_list.append(k_val)
